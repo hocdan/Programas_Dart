@@ -8,20 +8,14 @@ import "dart:io";
 */
 
 class Livro {
-  //atributos da classe Livro
+  //atributos da classe Livro (podem ser inicializados depois)
   late String titulo;
   late String genero;
   late int numPag;
   late double preco;
   late bool lido;
-  //construtor da classe Livro
-  Livro(String titulo, String genero, int numPag, double preco, bool lido) {
-    this.titulo = titulo;
-    this.genero = genero;
-    this.numPag = numPag;
-    this.preco = preco;
-    this.lido = lido;
-  }
+  //construtor da classe Livro (forma especial direta)
+  Livro(this.titulo, this.genero, this.numPag, this.preco, this.lido);
   //métodos da classe Livro
   void imprimirInformacoes() {
     print("\n=================================");
@@ -68,9 +62,11 @@ class Livro {
 
 void main() {
   List<Livro> estante = []; //inicializando estante com zero livros
-  String opcao, titulo;
-  int i;
-  bool rodando = true, status;
+  late Livro novoLivro; //livro vai ser inicializado depois
+  String opcao, titulo, genero, alteracao;
+  double preco;
+  int i, numPag;
+  bool rodando = true, status, lido;
 
   //loop principal do programa
   while (rodando) {
@@ -86,12 +82,17 @@ void main() {
     switch (opcao) {
       case '1':
         print("\nCriando novo livro...");
-        Livro novoLivro = Livro("", "", 0, 0.0, false); //setando padrao
-        novoLivro.setTitulo();
-        novoLivro.setGenero();
-        novoLivro.setNumPag();
-        novoLivro.setPreco();
-        novoLivro.setLido();
+        //recolhendo informacoes para criar livro
+        titulo = lerDados("Novo título: ");
+        genero = lerDados("Novo gênero: ");
+        numPag = int.parse(lerDados("Novo número de páginas: "));
+        preco = double.parse(lerDados("Novo preço: R\$"));
+        alteracao = lerDados("O livro foi lido (Y/N)? ").toUpperCase();
+        if (alteracao == 'Y')
+          lido = true;
+        else
+          lido = false;
+        novoLivro = Livro(titulo, genero, numPag, preco, lido); //livro criado
         //verificando se o livro já existe na estante...
         status = false;
         if (estante.length > 0) {

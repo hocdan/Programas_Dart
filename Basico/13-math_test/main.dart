@@ -1,7 +1,8 @@
 import "dart:core";
-import "dart:io";
-import "dart:math";
-import "dart:convert";
+
+import 'entidades.dart';
+import 'service.dart';
+import 'util.dart';
 
 /*
   Programa no formato de quiz que irá testar os conhecimentos de algebra
@@ -10,98 +11,22 @@ import "dart:convert";
   no programa
 */
 
-//definição da super classe Usuario, que irá derivar Aluno e Professor, somente!
-abstract class Usuario {
-  late String nome; //identificador do usuario
-  late String codigo; //identificador unico do usuario
-  late String _senha; //para proteger o uso indevido do perfil do usuário
-  late String _tipo; //seu tipo/privilegio, pode ser: Aluno ou Professor
-  late List
-      testes; //pode armazenar historico de testes ou problemas matematicos
-
-  void verInfo() {
-    print("\n===================================");
-    print("+ Nome do usuário: $nome");
-    print("+ Senha: ${'*' * _senha.length}");
-    print("+ Cargo: $_tipo");
-    print("===================================\n");
-  }
-
-  void setSenha(String senhaAntiga, String senhaNova) {
-    //verificando validade da operação
-    if (senhaAntiga == this._senha) {
-      this._senha = senhaNova;
-      print("\nACESSO GARANTIDO! Senha trocada com sucesso...\n");
-    } else {
-      print("\nACESSO NEGADO! Operação cancelada...\n");
-    }
-  }
-
-  String getNome() {
-    return this.nome;
-  }
-
-  void removeTeste(int index) {
-    this.testes.removeAt(index);
-  }
-
-  List getTeste(int index) {
-    if (index == -1)
-      return this.testes; //retornando todos os testes
-    else
-      return this.testes[index].toList(); //retornando um teste especifico
-  }
-}
-
-//definição do objeto Aluno
-class Aluno extends Usuario {
-  Aluno(String nome, String codigo, String senha) {
-    this.nome = nome;
-    this.codigo = codigo;
-    this._senha = senha;
-    this._tipo = "Aluno";
-    this.testes = []; //lista vazia
-  }
-
-  void addTeste(String teste) {
-    this.testes.add(teste);
-  }
-}
-
-//definição do objeto Professor
-class Professor extends Usuario {
-  Professor(String nome, String codigo, String senha) {
-    this.nome = nome;
-    this.codigo = codigo;
-    this._senha = senha;
-    this._tipo = "Professor";
-    this.testes = []; //lista vazia
-  }
-
-  void addTeste(Problema teste) {
-    this.testes.add(teste);
-  }
-}
-
-//definição do objeto Problema
-class Problema {
-  String _questao;
-  String _resposta;
-
-  Problema(this._questao, this._resposta); //construtor direto
-}
 
 //Programa principal
 void main() {
   List<Aluno> alunos = []; //conjunto de alunos do programa
   List<Professor> professores = []; //conjunto de professores do programa
   List<Problema> provas = []; //conjunto de provas do programa
-  String opcao1, opcao2, nome, codigo, senhaA, senha, questao, resposta;
+  String opcao1, opcao2, codigo, senhaA, senha, questao, resposta;
   int index;
   bool rodando = true, erro;
 
   //loop principal
   while (rodando) {
+    // teste pra ver se tá cadastrando mais de 1 aluno ou professor
+    alunos.forEach((aluno) {print(aluno.nome);});
+    professores.forEach((professor) {print(professor.nome);});
+
     //imprimindo menu
     print("\nMATH TESTE 1.0\n");
     print("[1] Acessar área do aluno");
@@ -109,7 +34,7 @@ void main() {
     print("[3] Mudar senha");
     print("[4] Ver perfil");
     print("[5] Sair");
-    opcao1 = lerDados("----> ");
+    opcao1 = lerDadosDeMenu();
     //realizando opcoes do menu
     switch (opcao1) {
       case '1':
@@ -120,16 +45,13 @@ void main() {
           print("[2] Ver histórico de provas");
           print("[3] Realizar prova");
           print("[4] Sair");
-          opcao2 = lerDados("---> ");
+          opcao2 = lerDadosDeMenu();
           //realizando opcoes
           if (opcao2 == '1') {
             print("\nCriando novo aluno...\n");
-            nome = lerDados("Nome do aluno: ");
-            senha = lerDados("Senha: ");
-            codigo = "A-" + getRandString(5);
-            Aluno aluno = new Aluno(nome, codigo, senha);
+            Aluno aluno = cadastrarAluno();
             alunos.add(aluno);
-            print("\nAluno de código $codigo criado com sucesso!\n");
+            print("\nAluno de código ${aluno.codigo} criado com sucesso!\n");
           } else if (opcao2 == '2') {
             print("\nEM DESENVOLVIMENTO...\n");
           } else if (opcao2 == '3') {
@@ -150,16 +72,13 @@ void main() {
           print("[2] Ver provas formuladas");
           print("[3] Adicionar questão");
           print("[4] Sair");
-          opcao2 = lerDados("---> ");
+          opcao2 = lerDadosDeMenu();
           //realizando opcoes
           if (opcao2 == '1') {
             print("\nCriando novo professor...\n");
-            nome = lerDados("Nome do professor: ");
-            senha = lerDados("Senha: ");
-            codigo = "P-" + getRandString(5);
-            Professor professor = new Professor(nome, codigo, senha);
+            Professor professor = cadastrarProfessor();
             professores.add(professor);
-            print("\nProfessor de código $codigo criado com sucesso!\n");
+            print("\nProfessor de código ${professor.codigo} criado com sucesso!\n");
           } else if (opcao2 == '2') {
             print("\nEM DESENVOLVIMENTO...\n");
           } else if (opcao2 == '3') {
@@ -229,33 +148,4 @@ void main() {
         print("\nOpção inválida!!!\n");
     }
   }
-}
-
-/*
-  Função que imprime um texto informativo e espera pelo input do usuário
-*/
-String lerDados(String texto) {
-  stdout.write(texto);
-  String resposta = stdin.readLineSync().toString();
-  return resposta;
-}
-
-/*
-  Função que retorna a posição de um usuario na lista, devolve -1 se não existir
-*/
-int existeUsuario(List usuarios, String codigo) {
-  int i, index = -1;
-  for (i = 0; i < usuarios.length; i++) {
-    if (usuarios[i].codigo == codigo) index = i;
-  }
-  return index;
-}
-
-/*
-  Função que retorna uma cadeia de caracteres aleatória para servir de código
-*/
-String getRandString(int len) {
-  var random = Random.secure();
-  var values = List<int>.generate(len, (i) => random.nextInt(255));
-  return base64UrlEncode(values);
 }

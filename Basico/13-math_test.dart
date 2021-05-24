@@ -3,6 +3,9 @@ import "dart:io";
 import "dart:math";
 import "dart:convert";
 
+import "entidades-math_test.dart"; //definições das classes
+import "util.dart"; //funções úteis feitas por fora
+
 /*
   Programa no formato de quiz que irá testar os conhecimentos de algebra
   do usuario ao cadastrar problemas e rodar pequenos testes! 
@@ -10,95 +13,14 @@ import "dart:convert";
   no programa
 */
 
-//definição da super classe Usuario, que irá derivar Aluno e Professor, somente!
-abstract class Usuario {
-  late String nome; //identificador do usuario
-  late String codigo; //identificador unico do usuario
-  late String _senha; //para proteger o uso indevido do perfil do usuário
-  late String _tipo; //seu tipo/privilegio, pode ser: Aluno ou Professor
-  late List
-      testes; //pode armazenar historico de testes ou problemas matematicos
-
-  void verInfo() {
-    print("\n===================================");
-    print("+ Nome do usuário: $nome");
-    print("+ Senha: ${'*' * _senha.length}");
-    print("+ Cargo: $_tipo");
-    print("===================================\n");
-  }
-
-  void setSenha(String senhaAntiga, String senhaNova) {
-    //verificando validade da operação
-    if (senhaAntiga == this._senha) {
-      this._senha = senhaNova;
-      print("\nACESSO GARANTIDO! Senha trocada com sucesso...\n");
-    } else {
-      print("\nACESSO NEGADO! Operação cancelada...\n");
-    }
-  }
-
-  String getNome() {
-    return this.nome;
-  }
-
-  void removeTeste(int index) {
-    this.testes.removeAt(index);
-  }
-
-  List getTeste(int index) {
-    if (index == -1)
-      return this.testes; //retornando todos os testes
-    else
-      return this.testes[index].toList(); //retornando um teste especifico
-  }
-}
-
-//definição do objeto Aluno
-class Aluno extends Usuario {
-  Aluno(String nome, String codigo, String senha) {
-    this.nome = nome;
-    this.codigo = codigo;
-    this._senha = senha;
-    this._tipo = "Aluno";
-    this.testes = []; //lista vazia
-  }
-
-  void addTeste(String teste) {
-    this.testes.add(teste);
-  }
-}
-
-//definição do objeto Professor
-class Professor extends Usuario {
-  Professor(String nome, String codigo, String senha) {
-    this.nome = nome;
-    this.codigo = codigo;
-    this._senha = senha;
-    this._tipo = "Professor";
-    this.testes = []; //lista vazia
-  }
-
-  void addTeste(Problema teste) {
-    this.testes.add(teste);
-  }
-}
-
-//definição do objeto Problema
-class Problema {
-  String _questao;
-  String _resposta;
-
-  Problema(this._questao, this._resposta); //construtor direto
-}
-
 //Programa principal
 void main() {
   List<Aluno> alunos = []; //conjunto de alunos do programa
   List<Professor> professores = []; //conjunto de professores do programa
-  List<Problema> provas = []; //conjunto de provas do programa
-  String opcao1, opcao2, nome, codigo, senhaA, senha, questao, resposta;
-  int index;
-  bool rodando = true, erro;
+  List<Teste> provas = []; //conjunto de testes do programa
+  String opcao1, opcao2, nome, codigo, senhaA, senha, problema, resposta;
+  late int i, j, index, posicao, tam, nota, existe;
+  bool rodando = true, erro, feito;
 
   //loop principal
   while (rodando) {
@@ -131,9 +53,53 @@ void main() {
             alunos.add(aluno);
             print("\nAluno de código $codigo criado com sucesso!\n");
           } else if (opcao2 == '2') {
-            print("\nEM DESENVOLVIMENTO...\n");
+            //lendo dados do usuario e tentando acessar sua lista de testes
+            codigo = lerDados("\nCódigo de usuário: ");
+            //procurando usuario na lista de alunos
+            index = existeUsuario(alunos, codigo);
+            if (index != -1) {
+              erro = false;
+              try {
+                posicao = int.parse(lerDados("\nIndex da prova (-1 para ver todos): "));
+              } on FormatException {
+                erro = true;
+              }
+              if (!erro && posicao >= -1 && posicao < alunos[index].testes.length) {
+                print("\n# Histórico de testes #\n");
+                print("Aluno: ${alunos[index].nome}\n");
+                alunos[index].getTeste(posicao); //imprimindo histórico
+                print("\n#         Fim         #\n");
+              } else {
+                print("\nOpção inválida!!!\n");
+              }
+            } else {
+              print("\nO aluno [$codigo] não existe na base de dados...\n");
+            }
           } else if (opcao2 == '3') {
-            print("\nEM DESENVOLVIMENTO...\n");
+            //lendo dados do usuario e tentando acessar sua lista de testes
+            codigo = lerDados("\nCódigo de usuário: ");
+            //procurando usuario na lista de alunos
+            index = existeUsuario(alunos, codigo);
+            if (index != -1) {
+              nome = lerDados("\nConteúdo da prova: ");
+              //verificando se o aluno já não fez a prova
+              feito = fezProva(alunos[index].testes, nome);
+              if (!feito) {
+                posicao = existeProva(provas, nome);
+                if (posicao != -1) {
+                  //realizando prova, caso exista
+                  nota = realizarProva(provas[posicao]); //devolve nota do aluno
+                  print("\nProva concluída! Nota final: $nota\n");
+                  alunos[index].testes.add("Prova [$nome] feita! Nota = $nota\n");
+                } else {
+                  print("\nA prova [$nome] não existe na base de dados...\n");
+                }
+              } else {
+                print("\nA prova [$nome] já foi respondida!\n");
+              }
+            } else {
+              print("\nO aluno [$codigo] não existe na base de dados...\n");
+            }
           } else if (opcao2 == '4') {
             print("\nSaindo da área do Aluno...\n");
             break; //encerrando loop do menu Aluno
@@ -148,7 +114,7 @@ void main() {
           print("\nPortal do Professor\n");
           print("[1] Cadastrar novo professor");
           print("[2] Ver provas formuladas");
-          print("[3] Adicionar questão");
+          print("[3] Adicionar prova");
           print("[4] Sair");
           opcao2 = lerDados("---> ");
           //realizando opcoes
@@ -161,9 +127,69 @@ void main() {
             professores.add(professor);
             print("\nProfessor de código $codigo criado com sucesso!\n");
           } else if (opcao2 == '2') {
-            print("\nEM DESENVOLVIMENTO...\n");
+            //lendo dados do usuario e tentando acessar sua lista de testes
+            codigo = lerDados("\nCódigo de usuário: ");
+            //procurando usuario na lista de professores
+            index = existeUsuario(professores, codigo);
+            if (index != -1) {
+              erro = false;
+              try {
+                posicao = int.parse(lerDados("\nIndex da prova (-1 para ver todos): "));
+              } on FormatException {
+                erro = true;
+              }
+              if (!erro && posicao >= -1 && posicao < professores[index].testes.length) {
+                print("\n# Histórico de provas #\n");
+                print("Professor: ${professores[index].nome}\n");
+                professores[index].getTeste(posicao); //imprimindo histórico
+                print("\n#         Fim         #\n");
+              } else {
+                print("\nOpção inválida!!!\n");
+              }
+            } else {
+              print("\nO professor [$codigo] não existe na base de dados...\n");
+            }
           } else if (opcao2 == '3') {
-            print("\nEM DESENVOLVIMENTO...\n");
+            //lendo dados do usuario e tentando acessar sua lista de testes
+            codigo = lerDados("\nCódigo de usuário: ");
+            //procurando usuario na lista de professores
+            index = existeUsuario(professores, codigo);
+            if (index != -1) {
+              //verificando o número de questoes que o professor deseja criar
+              erro = false;
+              try {
+                tam = int.parse(lerDados("Número de questões: "));
+              } on FormatException {
+                erro = true;
+              }
+              if (!erro && tam >= 1) {
+                nome = lerDados("\nNome do teste: ");
+                existe = existeProva(professores[index].testes, nome);
+                if (existe == -1) {
+                  //criando lista de questões para a prova
+                  List <Questao> questoes = [];
+                  for (i=0; i<tam; i++) {
+                    //armazenando conteúdo da questão
+                    problema = lerDados("Enunciado da questão $i: ");
+                    resposta = lerDados("Resposta da questão $i: ");
+                    //adicionando questão à lista de questões
+                    Questao questao = new Questao(problema, resposta);
+                    questoes.add(questao);
+                  }
+                  //salvando prova na lista de provas do sistema e do professor
+                  Teste teste = new Teste(nome, questoes);
+                  professores[index].testes.add(teste);
+                  provas.add(teste);
+                  print("\nProva de [$nome] cadastrada com sucesso!\n");
+                } else {
+                  print("\nProva de [$nome] já casdastrada!!!\n");
+                }
+              } else {
+                print("\nOpção inválida!!!\n");
+              }
+            } else {
+              print("\nO professor [$codigo] não existe na base de dados...\n");
+            }
           } else if (opcao2 == '4') {
             print("\nSaindo da área do Professor...\n");
             break; //encerrando loop do menu Professor
@@ -232,15 +258,6 @@ void main() {
 }
 
 /*
-  Função que imprime um texto informativo e espera pelo input do usuário
-*/
-String lerDados(String texto) {
-  stdout.write(texto);
-  String resposta = stdin.readLineSync().toString();
-  return resposta;
-}
-
-/*
   Função que retorna a posição de um usuario na lista, devolve -1 se não existir
 */
 int existeUsuario(List usuarios, String codigo) {
@@ -252,10 +269,39 @@ int existeUsuario(List usuarios, String codigo) {
 }
 
 /*
-  Função que retorna uma cadeia de caracteres aleatória para servir de código
+  Função que retorna a posicao de uma prova na lista, devolve -1 se não existir
 */
-String getRandString(int len) {
-  var random = Random.secure();
-  var values = List<int>.generate(len, (i) => random.nextInt(255));
-  return base64UrlEncode(values);
+int existeProva(List provas, String nome) {
+  int i, index = -1;
+  for (i=0; i<provas.length; i++) {
+    if (provas[i].nomeTeste == nome) index = i;
+  }
+  return index;
+}
+
+/*
+  Função que faz com que um Aluno responda um Teste, devolve a nota do Aluno
+*/
+int realizarProva(Teste prova) {
+  String resposta;
+  int i, nota = 0;
+  //percorrendo conteúdo da prova e esperando pelas respostas do aluno
+  print("\nPROVA [${prova.nomeTeste}]\n");
+  for (i=0; i<prova.questoes.length; i++) {
+    resposta = lerDados("$i) ${prova.questoes[i].problema} ");
+    if (resposta == prova.questoes[i].resposta) nota++; //acerto igual a 1 ponto
+  }
+  return nota;
+}
+
+/*
+  Função que verifica se um Aluno fez um Teste, devolve true ou false
+*/
+bool fezProva(List provas, String nome) {
+  bool feito = false;
+  int i;
+  for (i=0; i<provas.length; i++) {
+    if (provas[i].contains(nome)) feito = true;
+  }
+  return feito;
 }

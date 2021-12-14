@@ -1,0 +1,6 @@
+#para criar um projeto simples de web app
+dart create -t web-simple nome_do_projeto
+#passos seguintes para rodar o web app
+cd nome_do_projeto
+dart pub global activate webdev
+webdev serve
